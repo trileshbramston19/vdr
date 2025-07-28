@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Activity Log{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-semibold">Activity Log</h2>
+    <button onclick="exportActivityLog()" class="bg-green-600 text-white px-4 py-1 rounded">Export CSV</button>
+</div>
+
+<table id="activityLogTable" class="min-w-full bg-white shadow rounded">
+    <thead class="bg-gray-200 text-gray-700">
+        <tr>
+            <th class="px-4 py-2 text-left">Date</th>
+            <th class="px-4 py-2 text-left">Author</th>
+            <th class="px-4 py-2 text-left">Group</th>
+            <th class="px-4 py-2 text-left">Action</th>
+            <th class="px-4 py-2 text-left">Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in logs %}
+        <tr class="border-t hover:bg-gray-50">
+            <td class="px-4 py-2">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            <td class="px-4 py-2">{{ log.author_name }} ({{ log.author_email }})</td>
+            <td class="px-4 py-2">{{ log.group_name or '—' }}</td>
+            <td class="px-4 py-2 capitalize">{{ log.action }}</td>
+            <td class="px-4 py-2">{{ log.description }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="5" class="px-4 py-4 text-center text-gray-500 italic">No activity log entries found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+function exportActivityLog() {
+    const rows = [];
+    const table = document.getElementById("activityLogTable");
+
+    // Add headers
+    const headers = [...table.querySelectorAll("thead th")].map(th => `"${th.innerText.trim()}"`);
+    rows.push(headers.join(","));
+
+    // Add body rows
+    const bodyRows = table.querySelectorAll("tbody tr");
+    bodyRows.forEach(row => {
+        const cols = [...row.querySelectorAll("td")].map(td => `"${td.innerText.trim()}"`);
+        if (cols.length) {
+            rows.push(cols.join(","));
+        }
+    });
+
+    const csv = rows.join("\n");
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "activity_log.csv";
+    link.click();
+}
+</script>
+
+{% endblock %}

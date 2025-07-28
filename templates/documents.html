@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Documents{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-4">
+    <form method="GET" action="{{ url_for('upload_document') }}">
+        {% if current_folder %}
+        <input type="hidden" name="parent_id" value="{{ current_folder.id }}">
+        {% endif %}
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow transition">
+            + Add Document
+        </button>
+    </form>
+
+    <input type="text" placeholder="Search" class="border rounded px-3 py-1 text-sm w-64">
+</div>
+
+<!-- Breadcrumb -->
+{% if current_folder %}
+    <div class="text-sm text-gray-600 mb-4">
+        <a href="{{ url_for('documents') }}" class="text-blue-600 hover:underline">Root</a>
+        {% for folder in breadcrumb %}
+            &nbsp;/&nbsp;<a href="{{ url_for('documents', folder_id=folder.id) }}" class="text-blue-600 hover:underline">{{ folder.name }}</a>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<script>
+const searchInput = document.querySelector('input[placeholder="Search"]');
+searchInput.addEventListener('input', () => {
+    const filter = searchInput.value.toLowerCase();
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const name = row.querySelector('td a')?.innerText.toLowerCase() || '';
+        row.style.display = name.includes(filter) ? '' : 'none';
+    });
+});
+</script>
+
+<div class="flex">
+    <!-- Left: Quick Access -->
+    <div class="w-1/4 pr-4">
+        <div class="bg-white border rounded shadow-sm p-3 mb-4">
+            <h3 class="font-semibold text-sm mb-3">Quick access</h3>
+            <ul class="text-sm space-y-1">
+                <li>
+                    <a href="#" class="block hover:text-indigo-600" onclick="showList('recently_viewed')">Recently viewed</a>
+                    <ul id="recently_viewed" class="ml-4 hidden">
+                        {% for doc in recently_viewed_docs %}
+                        <li><a href="{{ url_for('view_document', doc_id=doc.id) }}" class="hover:text-indigo-600">{{ doc.name }}</a></li>
+                        {% else %}
+                        <li><em>No recently viewed documents</em></li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                <li>
+                    <a href="#" class="block hover:text-indigo-600" onclick="showList('newly_uploaded')">Newly uploaded</a>
+                    <ul id="newly_uploaded" class="ml-4 hidden">
+                        {% for doc in newly_uploaded_docs %}
+                        <li><a href="{{ url_for('view_document', doc_id=doc.id) }}" class="hover:text-indigo-600">{{ doc.name }}</a></li>
+                        {% else %}
+                        <li><em>No newly uploaded documents</em></li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                <li>
+                    <a href="#" class="block hover:text-indigo-600" onclick="showList('favorites')">Favorites</a>
+                    <ul id="favorites" class="ml-4 hidden">
+                        {% for doc in favorites_docs %}
+                        <li><a href="{{ url_for('view_document', doc_id=doc.id) }}" class="hover:text-indigo-600">{{ doc.name }}</a></li>
+                        {% else %}
+                        <li><em>No favorites</em></li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <script>
+        function showList(listId) {
+            ['recently_viewed', 'newly_uploaded', 'favorites'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(listId).classList.remove('hidden');
+        }
+        </script>
+    </div>
+
+    <!-- Right: Document Tree -->
+    <div class="w-3/4">
+        <table class="w-full bg-white shadow rounded mt-4">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-4 py-2">Name</th>
+                    <th class="px-4 py-2">Notes</th>
+                    <th class="px-4 py-2">Labels</th>
+                    <th class="px-4 py-2">Pages</th>
+                    <th class="px-4 py-2">Size</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for document in documents %}
+                <tr class="border-t hover:bg-gray-50">
+                    <td class="px-4 py-2">
+                        {% if document.is_folder %}
+                        <a href="{{ url_for('documents', folder_id=document.id) }}" class="text-blue-600 font-medium hover:underline">📁 {{ document.name }}</a>
+                        {% else %}
+                        <a href="{{ url_for('view_document', doc_id=document.id) }}" class="hover:underline">📄 {{ document.name }}</a>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">{{ document.notes }}</td>
+                    <td class="px-4 py-2">{{ document.labels }}</td>
+                    <td class="px-4 py-2 text-center">{{ document.pages or '—' }}</td>
+                    <td class="px-4 py-2 text-center">{{ '%.2f' % ((document.size_kb or 0) | float) }} KB</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Upload Document{% endblock %}
+{% block content %}
+<h2 class="text-xl font-bold mb-4">Upload New Document</h2>
+
+<form method="POST" enctype="multipart/form-data" class="space-y-4" action="{{ url_for('upload_document') }}">
+    <div>
+        <label class="block font-medium mb-1">Document/Folder Name</label>
+        <input type="text" name="name" placeholder="Document Name" class="w-full p-2 border rounded" required>
+    </div>
+
+    <div>
+        <label class="block font-medium mb-1">Parent Folder</label>
+        <select name="parent_id" class="w-full p-2 border rounded">
+            <option value="">-- No Parent (Root) --</option>
+            {% for folder_id, folder_name in folders %}
+                <option value="{{ folder_id }}">{{ folder_name|safe }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="flex items-center">
+        <input type="checkbox" id="is_folder" name="is_folder" class="mr-2">
+        <label for="is_folder" class="font-medium cursor-pointer">Is Folder?</label>
+    </div>
+
+    <div>
+        <label class="block font-medium mb-1">Notes</label>
+        <textarea name="notes" placeholder="Notes" class="w-full p-2 border rounded"></textarea>
+    </div>
+
+    <div>
+        <label class="block font-medium mb-1">Labels</label>
+        <input type="text" name="labels" placeholder="Labels" class="w-full p-2 border rounded">
+    </div>
+
+    <div>
+        <label class="block font-medium mb-1">Document File</label>
+        <input type="file" name="file" class="w-full p-2 border rounded" id="fileInput">
+    </div>
+
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+        Upload
+    </button>
+</form>
+
+<a href="{{ url_for('documents') }}" class="inline-block mt-4 text-indigo-600 hover:underline">← Back to Documents</a>
+
+<script>
+  const isFolderCheckbox = document.getElementById('is_folder');
+  const fileInput = document.getElementById('fileInput');
+
+  function toggleFileInput() {
+    if (isFolderCheckbox.checked) {
+      fileInput.disabled = true;
+      fileInput.required = false;
+      fileInput.value = '';
+    } else {
+      fileInput.disabled = false;
+      fileInput.required = true;
+    }
+  }
+
+  isFolderCheckbox.addEventListener('change', toggleFileInput);
+  document.addEventListener('DOMContentLoaded', toggleFileInput);
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Create User{% endblock %}
+{% block content %}
+<h2 class="text-xl font-bold mb-4">Create New User</h2>
+<form method="POST" class="space-y-4">
+    <input type="email" name="email" placeholder="Email" class="w-full p-2 border rounded" required>
+    <input type="password" name="password" placeholder="Password" class="w-full p-2 border rounded" required>
+    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Create</button>
+</form>
+{% endblock %}

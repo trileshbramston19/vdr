@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<h2 class="text-2xl font-semibold mb-6">My Profile</h2>
+
+<form method="POST" class="space-y-4 max-w-lg bg-white p-6 rounded shadow">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="text-red-600 font-semibold">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div>
+        <label class="block mb-1">First Name</label>
+        <input name="fname" value="{{ user.fname }}" class="w-full border px-3 py-2 rounded" readonly>
+    </div>
+    <div>
+        <label class="block mb-1">Last Name</label>
+        <input name="lname" value="{{ user.lname }}" class="w-full border px-3 py-2 rounded" readonly>
+    </div>
+    <div>
+        <label class="block mb-1">Email</label>
+        <input type="email" name="email" value="{{ user.email }}" class="w-full border px-3 py-2 rounded" readonly>
+    </div>
+    <hr class="my-4">
+    <div>
+        <label class="block mb-1 text-sm font-semibold">Current Password (required)</label>
+        <input type="password" name="current_password" class="w-full border px-3 py-2 rounded" required>
+    </div>
+    <div>
+        <label class="block mb-1">New Password 
+            <span class="text-sm text-gray-500">(leave blank to keep current)</span>
+        </label>
+        <input type="password" name="new_password" id="new_password" 
+            class="w-full border px-3 py-2 rounded" oninput="validatePassword()">
+        <p id="password_feedback" class="text-sm mt-1"></p>
+    </div>
+
+    <div class="flex justify-between">
+        <a href="{{ url_for('participants') }}" class="text-indigo-600 hover:underline">← Back</a>
+        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+            Save Changes
+        </button>
+    </div>
+</form>
+<script>
+function validatePassword() {
+    const password = document.getElementById("new_password").value;
+    const feedback = document.getElementById("password_feedback");
+
+    let messages = [];
+
+    if (password.length > 0) {
+        if (password.length < 8) messages.push("At least 8 characters");
+        if (!/[A-Z]/.test(password)) messages.push("One uppercase letter");
+        if (!/\d/.test(password)) messages.push("One number");
+
+        if (messages.length === 0) {
+            feedback.textContent = "Strong password ✔";
+            feedback.className = "text-green-600 text-sm mt-1";
+        } else {
+            feedback.textContent = "Password must include: " + messages.join(", ");
+            feedback.className = "text-red-600 text-sm mt-1";
+        }
+    } else {
+        feedback.textContent = "";
+    }
+}
+</script>
+{% endblock %}

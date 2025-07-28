@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Participants{% endblock %}
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-semibold">Participants</h2>
+    <div class="flex space-x-4">
+        <input id="searchInput" type="text" placeholder="Search participants..." aria-label="Search participants" class="p-2 border rounded w-2/3">
+        <button onclick="exportTable()" class="bg-green-600 text-white px-4 py-1 rounded">Export</button>
+    </div>
+</div>
+
+<table class="min-w-full bg-white shadow rounded">
+    <thead class="bg-gray-200 text-gray-700">
+        <tr>
+            <th class="px-4 py-2 text-left">Name</th>
+            <th class="px-4 py-2 text-left">Email</th>
+            <th class="px-4 py-2 text-left">Group</th>
+            <th class="px-4 py-2 text-left">Role</th>
+            <th class="px-4 py-2 text-left">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr class="border-t hover:bg-gray-50">
+            <td class="px-4 py-2">{{ user.name }}</td>
+            <td class="px-4 py-2">{{ user.email }}</td>
+            <td class="px-4 py-2">{{ user.group_name }}</td>
+            <td class="px-4 py-2">{{ user.role }}</td>
+            <td class="px-4 py-2">{{ user.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+function exportTable() {
+    const rows = [...document.querySelectorAll("table tbody tr")].filter(row => row.style.display !== "none");
+    const csv = rows.map(row => 
+        [...row.children].map(cell => `"${cell.innerText}"`).join(",")
+    ).join("\n");
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "participants.csv";
+    a.click();
+}
+
+document.getElementById("searchInput").addEventListener("input", function () {
+    const search = this.value.toLowerCase();
+    const rows = document.querySelectorAll("table tbody tr");
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(search) ? "" : "none";
+    });
+});
+</script>
+{% endblock %}
