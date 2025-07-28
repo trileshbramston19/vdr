@@ -202,8 +202,9 @@ def login():
             flash('Invalid credentials', 'error')
         return render_template('login.html')
     except Exception as e:
+        print(f"Login failed: {e}")  # for console debugging on Render
         app.logger.error(f"Login failed: {e}", exc_info=True)
-        return "Login Error", 500
+        return f"Login Error: {str(e)}", 500  # TEMP: to see error in browser
     
 @app.route('/logout')
 def logout():
