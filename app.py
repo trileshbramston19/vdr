@@ -173,37 +173,37 @@ def internal_error(error):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     try:
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        user = User.query.filter_by(email=email).first()
-        if user and bcrypt.check_password_hash(user.password, password):
-            participant = Participant.query.filter_by(email=email).first()
-            if not participant:
-                flash("No participant record found for user.", "error")
-                return redirect(url_for('login'))
+        if request.method == 'POST':
+            email = request.form['email']
+            password = request.form['password']
+            user = User.query.filter_by(email=email).first()
+            if user and bcrypt.check_password_hash(user.password, password):
+                participant = Participant.query.filter_by(email=email).first()
+                if not participant:
+                    flash("No participant record found for user.", "error")
+                    return redirect(url_for('login'))
 
-            session['user_id'] = user.id
-            session['user_email'] = user.email
-            session['fname'] = user.fname
-            session['lname'] = user.lname
+                session['user_id'] = user.id
+                session['user_email'] = user.email
+                session['fname'] = user.fname
+                session['lname'] = user.lname
 
-            projects = participant.projects
-            if len(projects) == 1:
-                session['project_id'] = projects[0].id
-                session['project_name'] = projects[0].name
-                return redirect(url_for('participants'))
-            elif len(projects) > 1:
-                session['temp_participant_id'] = participant.id
-                return redirect(url_for('select_project'))
-            else:
-                flash("You have no projects assigned.", "error")
-                return redirect(url_for('login'))
-        flash('Invalid credentials', 'error')
-    return render_template('login.html')
- except Exception as e:
-    app.logger.error(f"Login failed: {e}", exc_info=True)
-    return "Login Error", 500
+                projects = participant.projects
+                if len(projects) == 1:
+                    session['project_id'] = projects[0].id
+                    session['project_name'] = projects[0].name
+                    return redirect(url_for('participants'))
+                elif len(projects) > 1:
+                    session['temp_participant_id'] = participant.id
+                    return redirect(url_for('select_project'))
+                else:
+                    flash("You have no projects assigned.", "error")
+                    return redirect(url_for('login'))
+            flash('Invalid credentials', 'error')
+        return render_template('login.html')
+    except Exception as e:
+        app.logger.error(f"Login failed: {e}", exc_info=True)
+        return "Login Error", 500
     
 @app.route('/logout')
 def logout():
