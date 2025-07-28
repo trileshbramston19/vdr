@@ -6,11 +6,48 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="flex items-center justify-center h-screen bg-gray-100">
-    <form method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 w-full max-w-sm">
+    <form method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 w-full max-w-sm" id="login-form">
         <h2 class="text-xl mb-4 font-bold text-center">Login</h2>
+
         <input type="email" name="email" placeholder="Email" required class="w-full mb-4 px-3 py-2 border rounded" />
-        <input type="password" name="password" placeholder="Password" required class="w-full mb-4 px-3 py-2 border rounded" />
+
+        <div class="relative mb-4">
+            <input id="password" type="password" name="password" placeholder="Password" required class="w-full px-3 py-2 border rounded pr-10" />
+            <button type="button" onclick="togglePassword()" class="absolute right-2 top-2 p-1 text-gray-500 focus:outline-none">
+                <!-- Eye Open Icon -->
+                <svg id="eye-open" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7z" />
+                </svg>
+                <!-- Eye Closed Icon -->
+                <svg id="eye-closed" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.269-2.943-9.543-7a10.05 10.05 0 012.01-3.252M9.878 9.878a3 3 0 104.243 4.243M15 12a3 3 0 00-3-3m0 0a3 3 0 00-3 3m0 0a3 3 0 003 3m0-3a3 3 0 003-3m-6 6L3 3m18 18l-2.121-2.121" />
+                </svg>
+            </button>
+        </div>
+
         <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Login</button>
     </form>
+
+    <!-- Brave Browser Detection Script -->
+    <script>
+        
+
+        function togglePassword() {
+            const input = document.getElementById("password");
+            const eyeOpen = document.getElementById("eye-open");
+            const eyeClosed = document.getElementById("eye-closed");
+
+            if (input.type === "password") {
+                input.type = "text";
+                eyeOpen.classList.add("hidden");
+                eyeClosed.classList.remove("hidden");
+            } else {
+                input.type = "password";
+                eyeClosed.classList.add("hidden");
+                eyeOpen.classList.remove("hidden");
+            }
+        }
+    </script>
 </body>
 </html>

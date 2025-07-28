@@ -3,16 +3,37 @@
 {% block title %}View Document - {{ document.name }}{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-semibold mb-4">{{ document.name }}</h1>
-  <div class="border rounded shadow" style="height: 90vh;" oncontextmenu="return false;">
-    <iframe src="{{ file_url }}#toolbar=0&navpanes=0&scrollbar=0" 
-            class="w-full h-full" 
-            style="border:none;" 
+<h1 class="text-2xl font-semibold mb-4">{{ document.name }}</h1>
+
+<!-- Wrapper that prevents right-click -->
+<div class="border rounded shadow" style="height: 90vh;" oncontextmenu="return false;">
+    <!-- iframe with PDF and overlay -->
+    <div class="relative w-full h-full">
+        <!-- Transparent overlay to catch right-clicks -->
+        <div 
+            class="absolute top-0 left-0 w-full h-full z-10" 
+            oncontextmenu="return false">
+        </div>
+
+        <!-- PDF iframe -->
+        <iframe 
+            src="{{ file_url }}#toolbar=0&navpanes=0&scrollbar=0" 
+            class="w-full h-full absolute top-0 left-0 z-0"
+            style="border: none;" 
             title="Document Viewer - {{ document.name }}">
-    </iframe>
-  </div>
-  <a href="{{ url_for('documents') }}" 
-     class="inline-block mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+        </iframe>
+    </div>
+</div>
+
+<a href="{{ url_for('documents') }}" 
+   class="inline-block mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
     ← Back to Documents
-  </a>
+</a>
+
+<!-- Disable right-click globally as fallback -->
+<script>
+  document.addEventListener('contextmenu', event => {
+    event.preventDefault();
+  });
+</script>
 {% endblock %}

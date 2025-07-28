@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Assign Group to Project{% endblock %}
+{% block content %}
+<h2 class="text-2xl font-bold mb-4">Assign Group to Project</h2>
+<form method="POST" class="space-y-4">
+    <select name="group_name" class="w-full p-2 border rounded" required>
+        <option value="">Select Group</option>
+        {% for group in groups %}
+            <option value="{{ group.group_name }}">{{ group.group_name }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="project_id" class="w-full p-2 border rounded" required>
+        <option value="">Select Project</option>
+        {% for project in projects %}
+            <option value="{{ project.id }}">{{ project.name }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit" class="bg-green-700 text-white px-6 py-2 rounded hover:bg-green-800">Assign</button>
+</form>
+{% endblock %}

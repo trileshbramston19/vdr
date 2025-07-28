@@ -4,6 +4,7 @@
 <h2 class="text-xl font-bold mb-4">Upload New Document</h2>
 
 <form method="POST" enctype="multipart/form-data" class="space-y-4" action="{{ url_for('upload_document') }}">
+    
     <div>
         <label class="block font-medium mb-1">Document/Folder Name</label>
         <input type="text" name="name" placeholder="Document Name" class="w-full p-2 border rounded" required>
@@ -32,6 +33,16 @@
     <div>
         <label class="block font-medium mb-1">Labels</label>
         <input type="text" name="labels" placeholder="Labels" class="w-full p-2 border rounded">
+    </div>
+
+    <div>
+        <label class="block font-medium mb-1">Select Project <span class="text-red-500">*</span></label>
+        <select name="project_id" class="w-full p-2 border rounded" required>
+            <option value="" disabled selected>-- Select Project --</option>
+            {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.name }}</option>
+            {% endfor %}
+        </select>
     </div>
 
     <div>

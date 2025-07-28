@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Group → Project Mapping{% endblock %}
+{% block content %}
+<h2 class="text-xl font-bold mb-4">User Group and Project Mapping</h2>
+{% if session.get('role') == 'Admin' %}<a href="{{ url_for('assign_group_project') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-indigo-700 whitespace-nowrap">
+    Assign Project
+</a>{% endif %}<br /><br />
+<table class="min-w-full bg-white shadow rounded">
+    <thead class="bg-gray-200">
+        <tr>
+            <th class="px-4 py-2 text-left">User</th>
+            <th class="px-4 py-2 text-left">Group</th>
+            <th class="px-4 py-2 text-left">Project</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in matrix %}
+        <tr class="border-t">
+            <td class="px-4 py-2">{{ row.user }}</td>
+            <td class="px-4 py-2">{{ row.group_name }}</td>
+            <td class="px-4 py-2">{{ row.project }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

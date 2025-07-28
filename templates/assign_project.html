@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Project{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Assign Project to Participant</h1>
+
+<form method="POST" class="bg-white p-6 rounded shadow-md max-w-md">
+    <div class="mb-4">
+        <label for="participant_id" class="block mb-2 font-semibold">Select Participant:</label>
+        <select name="participant_id" id="participant_id" required class="w-full border px-3 py-2 rounded">
+            {% for participant in participants %}
+                <option value="{{ participant.id }}">{{ participant.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-4">
+        <label for="project_id" class="block mb-2 font-semibold">Select Project:</label>
+        <select name="project_id" id="project_id" required class="w-full border px-3 py-2 rounded">
+            {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+        Assign
+    </button>
+</form>
+{% endblock %}

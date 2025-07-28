@@ -2,10 +2,13 @@
 {% block title %}Participants{% endblock %}
 {% block content %}
 <div class="flex justify-between items-center mb-4">
-    <h2 class="text-2xl font-semibold">Participants</h2>
-    <div class="flex space-x-4">
+    <div class="flex space-x-4"><h2 class="text-2xl font-semibold">Participants</h2>{% if session.get('role') == 'Admin' %}<a href="{{ url_for('add_participant') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-indigo-700">+ Add</a>{% endif %}</div>
+    <div class="flex space-x-6">
         <input id="searchInput" type="text" placeholder="Search participants..." aria-label="Search participants" class="p-2 border rounded w-2/3">
-        <button onclick="exportTable()" class="bg-green-600 text-white px-4 py-1 rounded">Export</button>
+        {% if session.get('role') == 'Admin' %}<button onclick="exportTable()" class="bg-green-600 text-white px-4 py-1 rounded">Export</button>{% endif %}
+        {% if session.get('role') == 'Admin' %}<a href="{{ url_for('assign_group_project') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-indigo-700 whitespace-nowrap">
+    Assign Project
+</a>{% endif %}
     </div>
 </div>
 
@@ -20,7 +23,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for user in users %}
+        {% for user in participants %}
         <tr class="border-t hover:bg-gray-50">
             <td class="px-4 py-2">{{ user.name }}</td>
             <td class="px-4 py-2">{{ user.email }}</td>

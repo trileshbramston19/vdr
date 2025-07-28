@@ -35,6 +35,20 @@
                             Activity Log
                         </a>
                     </li>
+                    {% if session.get('role') == 'Admin' %}
+                    <li>
+                        <a href="{{ url_for('group_project_matrix') }}" class="block px-2 py-1 rounded hover:text-indigo-600 {% if current == 'group_project_matrix' %}text-indigo-600 font-semibold bg-indigo-50{% endif %}">
+                            Groups List
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if session.get('role') == 'Admin' %}
+                    <li>
+                        <a href="{{ url_for('create_project') }}" class="block px-2 py-1 rounded hover:text-indigo-600 {% if current == 'create_project' %}text-indigo-600 font-semibold bg-indigo-50{% endif %}">
+                            Create Project
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
             </nav>
         </div>

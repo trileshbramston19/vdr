@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Select Project{% endblock %}
+{% block content %}
+<h2 class="text-2xl font-semibold mb-4">Select a Project</h2>
+
+<form method="POST" class="space-y-4 max-w-md">
+    <div>
+        <label for="project_id" class="block font-medium mb-1">Project</label>
+        <select name="project_id" id="project_id" required class="w-full p-2 border rounded">
+            <option value="" disabled selected>-- Select Project --</option>
+            {% for project in projects %}
+                <option value="{{ project.id }}">{{ project.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Select
+    </button>
+</form>
+{% endblock %}

@@ -4,7 +4,7 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-2xl font-semibold">Activity Log</h2>
-    <button onclick="exportActivityLog()" class="bg-green-600 text-white px-4 py-1 rounded">Export CSV</button>
+    {% if session.get('role') == 'Admin' %}<button onclick="exportActivityLog()" class="bg-green-600 text-white px-4 py-1 rounded">Export CSV</button>{% endif %}
 </div>
 
 <table id="activityLogTable" class="min-w-full bg-white shadow rounded">
