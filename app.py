@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 from PyPDF2 import PdfReader
 import os, random, string, tempfile, atexit
+import logging
 from watermark_merger import add_watermark_to_pdf
 
 app = Flask(__name__)
@@ -161,8 +162,17 @@ def cleanup_temp_files():
 def index():
     return redirect(url_for('login'))
 
+
+logging.basicConfig(level=logging.INFO)
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f"Server Error: {error}", exc_info=True)
+    return "Internal Server Error", 500
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    try:
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
@@ -191,8 +201,10 @@ def login():
                 return redirect(url_for('login'))
         flash('Invalid credentials', 'error')
     return render_template('login.html')
-
-
+ except Exception as e:
+    app.logger.error(f"Login failed: {e}", exc_info=True)
+    return "Login Error", 500
+    
 @app.route('/logout')
 def logout():
     session.clear()
