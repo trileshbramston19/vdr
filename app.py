@@ -12,6 +12,7 @@ import os, random, string, tempfile, atexit
 from watermark_merger import add_watermark_to_pdf
 from flask import render_template, request, redirect, url_for, flash
 from sqlalchemy import text
+from flask import abort
 
 app = Flask(__name__)
 app.config.update(
@@ -44,27 +45,31 @@ class User(db.Model):
     email = db.Column(db.String(100), nullable=False, unique=True)
     password = db.Column(db.String(255), nullable=False)
 
-participant_projects = db.Table('participant_projects',
-    db.Column('participant_id', db.Integer, db.ForeignKey('participant.id'), primary_key=True),
-    db.Column('project_id', db.Integer, db.ForeignKey('project.id'), primary_key=True)
-)
-
 group_project = db.Table('group_projects',
     db.Column('group_name', db.String, db.ForeignKey('participant.group_name')),
     db.Column('project_id', db.Integer, db.ForeignKey('project.id'))
 )
 
+participant_projects = db.Table('participant_projects',
+    db.Column('participant_id', db.Integer, db.ForeignKey('participant.id'), primary_key=True),
+    db.Column('project_id', db.Integer, db.ForeignKey('project.id'), primary_key=True),
+    db.Column('can_view', db.Boolean, default=True),
+    db.Column('can_upload', db.Boolean, default=False),
+    db.Column('can_download', db.Boolean, default=False),
+    db.Column('can_edit', db.Boolean, default=False),
+    db.Column('can_delete', db.Boolean, default=False)
+)
+
 class Project(db.Model):
-    __tablename__ = 'project'
+    __tablename__ = 'project'  # <-- Match this with ForeignKey target below
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
-    participants = db.relationship(
-        'Participant',
-        secondary=participant_projects,
-        back_populates='projects'
-    )
+
+    participant_projects = db.relationship("ParticipantProject", back_populates="project")
+
 
 class Participant(db.Model):
+    __tablename__ = 'participant'  # <-- Explicitly define table name
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False, unique=True)
@@ -73,11 +78,30 @@ class Participant(db.Model):
     status = db.Column(db.String(20))
     last_signin = db.Column(db.DateTime)
     project_name = db.Column(db.String(100), nullable=False)
-    projects = db.relationship(
-    'Project',
-    secondary=participant_projects,
-    back_populates='participants'
-)
+
+    participant_projects = db.relationship("ParticipantProject", back_populates="participant")
+
+    # Useful for querying projects directly from a participant
+    projects = db.relationship("Project", secondary="participant_projects", viewonly=True, backref="participants")
+
+
+class ParticipantProject(db.Model):
+    __tablename__ = 'participant_projects'
+    __table_args__ = {'extend_existing': True}
+
+    participant_id = db.Column(db.Integer, db.ForeignKey('participant.id'), primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), primary_key=True)
+
+    can_view = db.Column(db.Boolean, default=True)
+    can_upload = db.Column(db.Boolean, default=False)
+    can_download = db.Column(db.Boolean, default=False)
+    can_edit = db.Column(db.Boolean, default=False)
+    can_delete = db.Column(db.Boolean, default=False)
+
+    participant = db.relationship("Participant", back_populates="participant_projects")
+    project = db.relationship("Project", back_populates="participant_projects")
+
+
 
 class Document(db.Model):
     __tablename__ = 'documents'
@@ -422,22 +446,62 @@ def upload_document():
 
 @app.route('/view_document/<int:doc_id>')
 def view_document(doc_id):
+    # Fetch document
     doc = Document.query.get_or_404(doc_id)
-    session['recently_viewed'] = [doc_id] + [i for i in session.get('recently_viewed', []) if i != doc_id][:4]
+
+    # Track recent documents in session
+    session['recently_viewed'] = [doc_id] + [
+        i for i in session.get('recently_viewed', []) if i != doc_id
+    ][:4]
+
+    # Determine viewer (admin or participant)
     email = session.get('participant_email') or session.get('user_email')
     viewer = Participant.query.filter_by(email=email).first()
     full_name = viewer.name if viewer else 'Unknown Viewer'
-    if viewer:
-        db.session.add(ActivityLog(author_name=viewer.name, author_email=viewer.email, group_name=viewer.group_name, action="View Document", description=f"Viewed document '{doc.name}'"))
-        db.session.commit()
-    temp_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf', dir=app.config['UPLOAD_FOLDER']).name
-    add_watermark_to_pdf(os.path.join(app.config['UPLOAD_FOLDER'], doc.filename), full_name, temp_path)
-    TEMP_FILES.append(temp_path)
-    return render_template('view_document.html', document=doc, file_url=url_for('uploaded_file', filename=os.path.basename(temp_path)))
 
+    # Log the view activity
+    if viewer:
+        log = ActivityLog(
+            author_name=viewer.name,
+            author_email=viewer.email,
+            group_name=viewer.group_name,
+            action="View Document",
+            description=f"Viewed document '{doc.name}'"
+        )
+        db.session.add(log)
+        db.session.commit()
+
+    # Determine if user has download permission
+    can_download = False
+    if viewer:
+        if viewer.role == 'Admin':
+            can_download = True
+        else:
+            permission = ParticipantProject.query.filter_by(
+                participant_id=viewer.id,
+                project_id=doc.project_id
+            ).first()
+            if permission and permission.can_download:
+                can_download = True
+
+    # Generate watermarked file
+    temp_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf', dir=app.config['UPLOAD_FOLDER']).name
+    add_watermark_to_pdf(
+        os.path.join(app.config['UPLOAD_FOLDER'], doc.filename),
+        full_name,
+        temp_path
+    )
+    TEMP_FILES.append(temp_path)
+
+    return render_template(
+        'view_document.html',
+        document=doc,
+        file_url=url_for('uploaded_file', filename=os.path.basename(temp_path)),
+        can_download=can_download
+    )
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory('uploads', filename)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/participants/add', methods=['GET', 'POST'])
 @login_required
@@ -540,6 +604,40 @@ def my_profile():
         return redirect(url_for('my_profile'))
     return render_template('my_profile.html', user=user)
 
+
+@app.route('/manage-permissions/<int:participant_id>', methods=['GET', 'POST'])
+@login_required
+def manage_permissions(participant_id):
+    if session.get('role') != 'Admin':
+        abort(403)
+
+    participant = Participant.query.get_or_404(participant_id)
+    projects = participant.projects
+
+    if request.method == 'POST':
+        for project in projects:
+            can_view = request.form.get(f'view_{project.id}') == 'on'
+            can_upload = request.form.get(f'upload_{project.id}') == 'on'
+            can_download = request.form.get(f'download_{project.id}') == 'on'
+            can_edit = request.form.get(f'edit_{project.id}') == 'on'
+            can_delete = request.form.get(f'delete_{project.id}') == 'on'
+
+            db.session.execute(text("""
+                UPDATE participant_projects
+                SET can_view = :v, can_upload = :u, can_download = :d, can_edit = :e, can_delete = :del
+                WHERE participant_id = :pid AND project_id = :projid
+            """), {
+                'v': can_view, 'u': can_upload, 'd': can_download,
+                'e': can_edit, 'del': can_delete,
+                'pid': participant.id, 'projid': project.id
+            })
+        db.session.commit()
+        flash("Permissions updated.", "success")
+        return redirect(url_for('participants'))
+
+    # render template with checkboxes per project
+    return render_template("manage_permissions.html", participant=participant, projects=projects)
+
 @app.route('/assign_group_project', methods=['GET', 'POST'])
 @login_required
 def assign_group_project():
@@ -589,6 +687,45 @@ def create_project():
 
     return render_template('create_project.html')
 
+@app.route('/assign_permissions', methods=['GET', 'POST'])
+def assign_permissions():
+    participants = Participant.query.all()
+    projects = Project.query.all()
+    permissions = ParticipantProject.query.all()
+
+    selected_entry = None
+
+    if request.method == 'GET' and request.args.get('participant_id') and request.args.get('project_id'):
+        selected_entry = ParticipantProject.query.get((
+            request.args.get('participant_id'),
+            request.args.get('project_id')
+        ))
+
+    if request.method == 'POST':
+        participant_id = int(request.form['participant_id'])
+        project_id = int(request.form['project_id'])
+
+        # Get or create entry
+        entry = ParticipantProject.query.get((participant_id, project_id))
+        if not entry:
+            entry = ParticipantProject(participant_id=participant_id, project_id=project_id)
+            db.session.add(entry)
+
+        entry.can_edit = 'can_edit' in request.form
+        entry.can_download = 'can_download' in request.form
+        entry.can_upload = 'can_upload' in request.form
+        entry.can_delete = 'can_delete' in request.form
+
+        db.session.commit()
+        return redirect(url_for('assign_permissions'))
+
+    return render_template(
+        "assign_permissions.html",
+        participants=participants,
+        projects=projects,
+        permissions=permissions,
+        selected_entry=selected_entry
+    )
 
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

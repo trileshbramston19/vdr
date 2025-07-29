@@ -10,10 +10,11 @@
     <!-- Sidebar -->
     <aside class="w-64 bg-white shadow-md p-6 flex flex-col justify-between">
         <div>
+            {% if session.get('role') == 'User' %}
            <div class="project-selector">
                 <span>Project: {{ session.get('project_name', 'No Project Selected') }}</span>
                 <a href="{{ url_for('select_project') }}" class="text-indigo-600 hover:underline ml-2">Change</a>
-            </div>
+            </div><br/><br/>{% endif %}
             <nav>
                 {% set current = request.endpoint %}
                 <ul class="space-y-4 text-sm">
@@ -46,6 +47,13 @@
                     <li>
                         <a href="{{ url_for('create_project') }}" class="block px-2 py-1 rounded hover:text-indigo-600 {% if current == 'create_project' %}text-indigo-600 font-semibold bg-indigo-50{% endif %}">
                             Create Project
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if session.get('role') == 'Admin' %}
+                    <li>
+                        <a href="{{ url_for('assign_permissions') }}" class="block px-2 py-1 rounded hover:text-indigo-600 {% if current == 'assign_permissions' %}text-indigo-600 font-semibold bg-indigo-50{% endif %}">
+                            Assign Permissions
                         </a>
                     </li>
                     {% endif %}

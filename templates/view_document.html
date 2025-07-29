@@ -5,30 +5,82 @@
 {% block content %}
 <h1 class="text-2xl font-semibold mb-4">{{ document.name }}</h1>
 
-<!-- Wrapper that prevents right-click -->
 <div class="border rounded shadow" style="height: 90vh;" oncontextmenu="return false;">
-    <!-- iframe with PDF and overlay -->
-    <div class="relative w-full h-full">
-        <!-- Transparent overlay to catch right-clicks -->
-        <div 
-            class="absolute top-0 left-0 w-full h-full z-10" 
-            oncontextmenu="return false">
-        </div>
+    <div class="relative w-full h-full" style="position: relative; width: 100%; height: 100vh;">
+  <!-- IFRAME -->
+  <iframe 
+    id="docFrame"
+    src="{{ file_url }}#toolbar=0&navpanes=0" 
+    style="width: 100%; height: 100%; border: none;">
+  </iframe>
 
-        <!-- PDF iframe -->
-        <iframe 
-            src="{{ file_url }}#toolbar=0&navpanes=0&scrollbar=0" 
-            class="w-full h-full absolute top-0 left-0 z-0"
-            style="border: none;" 
-            title="Document Viewer - {{ document.name }}">
-        </iframe>
-    </div>
+  <!-- Overlay: blocks click but allows scroll -->
+  <div id="iframeOverlay"
+       style="
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         z-index: 10;
+         background-color: transparent;
+       ">
+  </div>
 </div>
 
-<a href="{{ url_for('documents') }}" 
-   class="inline-block mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
-    ← Back to Documents
-</a>
+<script>
+  const overlay = document.getElementById("iframeOverlay");
+  const iframe = document.getElementById("docFrame");
+
+  // Prevent mouse click and right-click
+  overlay.addEventListener("mousedown", e => e.preventDefault());
+  overlay.addEventListener("mouseup", e => e.preventDefault());
+  overlay.addEventListener("click", e => e.preventDefault());
+  overlay.addEventListener("contextmenu", e => e.preventDefault());
+
+  // Forward scroll events to iframe
+  overlay.addEventListener("wheel", function(e) {
+    e.preventDefault();
+
+    const iframeWindow = iframe.contentWindow;
+    if (iframeWindow) {
+      iframeWindow.scrollBy(0, e.deltaY);
+    }
+  }, { passive: false });
+
+  // Support for touch scrolling (mobile)
+  let startY = 0;
+  overlay.addEventListener("touchstart", function(e) {
+    startY = e.touches[0].clientY;
+  });
+
+  overlay.addEventListener("touchmove", function(e) {
+    e.preventDefault();
+
+    const deltaY = startY - e.touches[0].clientY;
+    const iframeWindow = iframe.contentWindow;
+    if (iframeWindow) {
+      iframeWindow.scrollBy(0, deltaY);
+    }
+
+    startY = e.touches[0].clientY;
+  }, { passive: false });
+</script>
+
+
+<div class="mt-4 flex gap-4">
+    <a href="{{ url_for('documents') }}" 
+       class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+        ← Back to Documents
+    </a>
+
+    {% if can_download %}
+    <a href="{{ file_url }}" download 
+       class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
+        ⬇️ Download Document
+    </a>
+    {% endif %}
+</div>
 
 <!-- Disable right-click globally as fallback -->
 <script>

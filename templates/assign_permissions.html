@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Assign Permissions{% endblock %}
+
+{% block content %}
+<h2 class="text-2xl font-semibold mb-4">Assign Permissions</h2>
+
+<form method="POST" class="space-y-4 max-w-xl">
+    <div>
+        <label for="participant_id" class="block">Participant</label>
+        <input type="text" value="{% if selected_entry %}{{ selected_entry.participant.name }} ({{ selected_entry.participant.email }}){% endif %}" disabled
+               class="w-full border px-2 py-1 rounded bg-gray-100">
+        <input type="hidden" name="participant_id" value="{{ selected_entry.participant_id if selected_entry }}">
+    </div>
+
+    <div>
+        <label for="project_id" class="block">Group Name</label>
+        <input type="text" value="{% if selected_entry %}{{ selected_entry.participant.group_name }}{% endif %}" disabled
+               class="w-full border px-2 py-1 rounded bg-gray-100">
+        <input type="hidden" name="project_id" value="{{ selected_entry.project_id if selected_entry }}">
+    </div>
+
+    <div class="flex flex-col space-y-2">
+        <label>
+            <input type="checkbox" name="can_edit"
+                   {% if selected_entry and selected_entry.can_edit %}checked{% endif %}>
+            Can Edit Details
+        </label>
+        <label>
+            <input type="checkbox" name="can_download"
+                   {% if selected_entry and selected_entry.can_download %}checked{% endif %}>
+            Can Download Documents
+        </label>
+        <label>
+            <input type="checkbox" name="can_upload"
+                   {% if selected_entry and selected_entry.can_upload %}checked{% endif %}>
+            Can Upload Documents
+        </label>
+        <label>
+            <input type="checkbox" name="can_delete"
+                   {% if selected_entry and selected_entry.can_delete %}checked{% endif %}>
+            Can Delete Participant
+        </label>
+    </div>
+
+    <button type="submit"
+            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        {% if selected_entry %}Update{% else %}Save{% endif %} Permissions
+    </button>
+</form>
+
+<hr class="my-8">
+
+<h3 class="text-xl font-semibold mb-2">Current Permissions</h3>
+<table class="table-auto w-full border text-left">
+    <thead>
+        <tr class="bg-gray-200">
+            <th class="px-4 py-2">Participant</th>
+            <th class="px-4 py-2">Group Name</th>
+            <th class="px-4 py-2">Can Edit</th>
+            <th class="px-4 py-2">Can Download</th>
+            <th class="px-4 py-2">Can Upload</th>
+            <th class="px-4 py-2">Can Delete</th>
+            <th class="px-4 py-2">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in permissions %}
+        <tr class="border-t hover:bg-gray-100">
+            <td class="px-4 py-2">{{ entry.participant.name }}</td>
+            <td class="px-4 py-2">{{ entry.participant.group_name }}</td>
+            <td class="px-4 py-2 text-center">{{ '✅' if entry.can_edit else '❌' }}</td>
+            <td class="px-4 py-2 text-center">{{ '✅' if entry.can_download else '❌' }}</td>
+            <td class="px-4 py-2 text-center">{{ '✅' if entry.can_upload else '❌' }}</td>
+            <td class="px-4 py-2 text-center">{{ '✅' if entry.can_delete else '❌' }}</td>
+            <td class="px-4 py-2">
+                <form method="GET" action="{{ url_for('assign_permissions') }}">
+                    <input type="hidden" name="participant_id" value="{{ entry.participant_id }}">
+                    <input type="hidden" name="project_id" value="{{ entry.project_id }}">
+                    <button class="text-blue-600 hover:underline">Edit</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
