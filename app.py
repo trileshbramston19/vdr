@@ -64,7 +64,7 @@ class Project(db.Model):
     __tablename__ = 'project'  # <-- Match this with ForeignKey target below
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
-
+    description = db.Column(db.Text)
     participant_projects = db.relationship("ParticipantProject", back_populates="project")
 
 
@@ -365,8 +365,15 @@ def documents():
 @login_required
 def upload_document():
     folders = get_folder_tree()
+
+    # Get current participant
     participant = Participant.query.filter_by(email=session['user_email']).first()
-    projects = participant.projects  # for dropdown
+
+    # Admins see all projects, others see assigned projects
+    if participant.role == 'Admin':
+        projects = Project.query.order_by(Project.name).all()
+    else:
+        projects = participant.projects  # Assigned projects only
 
     if request.method == 'POST':
         name = request.form['name']
@@ -379,7 +386,7 @@ def upload_document():
             flash("Please select a project.", "danger")
             return redirect(request.url)
 
-        # Get the selected project's name
+        # Validate selected project
         selected_project = Project.query.get(project_id)
         if not selected_project:
             flash("Invalid project selected.", "danger")
@@ -389,6 +396,7 @@ def upload_document():
         notes = request.form.get('notes')
         labels = request.form.get('labels')
 
+        # Handle folder creation
         if is_folder:
             folder_path = app.config['UPLOAD_FOLDER']
             if parent_id:
@@ -414,6 +422,7 @@ def upload_document():
             flash("Folder created successfully.", "success")
             return redirect(url_for('documents'))
 
+        # Handle file upload
         file = request.files.get('file')
         if not file or file.filename == '':
             flash("No file selected.", "danger")
@@ -422,6 +431,8 @@ def upload_document():
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
+
+        # Get PDF pages if applicable
         pages = len(PdfReader(file_path).pages) if file_path.endswith('.pdf') else 0
         size_kb = round(os.path.getsize(file_path) / 1024, 2)
 
