@@ -45,9 +45,15 @@
         </select>
     </div>
 
+    <!-- Drag-and-Drop Upload Zone -->
     <div>
         <label class="block font-medium mb-1">Document File</label>
-        <input type="file" name="file" class="w-full p-2 border rounded" id="fileInput">
+        <div id="dropZone" 
+            class="w-full p-6 border-2 border-dashed rounded text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+            <p class="text-gray-600">Drag & Drop file here or click to select</p>
+            <input type="file" name="file" id="fileInput" class="hidden" required>
+        </div>
+        <p id="fileName" class="text-sm text-gray-500 mt-1"></p>
     </div>
 
     <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
@@ -60,17 +66,51 @@
 <script>
   const isFolderCheckbox = document.getElementById('is_folder');
   const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('dropZone');
+  const fileNameDisplay = document.getElementById('fileName');
 
+  // Toggle file input if folder is checked
   function toggleFileInput() {
     if (isFolderCheckbox.checked) {
       fileInput.disabled = true;
       fileInput.required = false;
       fileInput.value = '';
+      fileNameDisplay.textContent = '';
+      dropZone.classList.add('opacity-50', 'pointer-events-none');
     } else {
       fileInput.disabled = false;
       fileInput.required = true;
+      dropZone.classList.remove('opacity-50', 'pointer-events-none');
     }
   }
+
+  // Handle drag and drop
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('bg-blue-50', 'border-blue-400');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('bg-blue-50', 'border-blue-400');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('bg-blue-50', 'border-blue-400');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      fileInput.files = e.dataTransfer.files;
+      fileNameDisplay.textContent = file.name;
+    }
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+      fileNameDisplay.textContent = fileInput.files[0].name;
+    }
+  });
 
   isFolderCheckbox.addEventListener('change', toggleFileInput);
   document.addEventListener('DOMContentLoaded', toggleFileInput);
