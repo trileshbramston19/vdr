@@ -204,12 +204,21 @@ def login():
                 flash("No participant record found for user.", "error")
                 return redirect(url_for('login'))
 
+            # Check if user is inactive
+            if participant.status == 'Inactive':
+                flash("Your account is inactive. Please contact the administrator.", "error")
+                return redirect(url_for('login'))
+
             session['user_id'] = user.id
             session['user_email'] = user.email
             session['fname'] = user.fname
             session['lname'] = user.lname
             session['role'] = participant.role.capitalize()
             session['group_name'] = participant.group_name
+
+            # Admins bypass project assignment check
+            if participant.role.lower() == 'admin':
+                return redirect(url_for('participants'))
 
             projects = participant.projects
             if len(projects) == 1:
@@ -224,9 +233,9 @@ def login():
             else:
                 flash("You have no projects assigned.", "error")
                 return redirect(url_for('login'))
+
         flash('Invalid credentials', 'error')
     return render_template('login.html')
-
 
 
 @app.route('/logout')
@@ -296,6 +305,36 @@ def participants():
 
     return render_template('participants.html', participants=participants)
 
+@app.route('/participants/edit/<int:participant_id>', methods=['GET', 'POST'])
+@login_required
+def edit_participant(participant_id):
+    participant = Participant.query.get_or_404(participant_id)
+    
+    # Query distinct group names to populate dropdown
+    groups = [g[0] for g in db.session.query(Participant.group_name).distinct().order_by(Participant.group_name).all()]
+    
+    if request.method == 'POST':
+        participant.name = request.form['name']
+        participant.email = request.form['email']
+        participant.group_name = request.form['group_name']
+        participant.role = request.form['role']
+        participant.status = request.form.get('status', '')
+        
+        db.session.commit()
+        flash('Participant updated successfully.', 'success')
+        return redirect(url_for('participants'))
+    
+    return render_template('edit_participant.html', participant=participant, groups=groups)
+
+
+@app.route('/participants/delete/<int:participant_id>', methods=['POST'])
+@login_required
+def delete_participant(participant_id):
+    participant = Participant.query.get_or_404(participant_id)
+    db.session.delete(participant)
+    db.session.commit()
+    flash('Participant deleted successfully.', 'success')
+    return redirect(url_for('participants'))
 
 @app.route('/group_project_matrix')
 @login_required
@@ -309,71 +348,164 @@ def group_project_matrix():
     """)).fetchall()
     return render_template("group_project_matrix.html", matrix=matrix)
 
+from flask import (
+    render_template, request, session, redirect, url_for, abort
+)
+from sqlalchemy import text
+
 @app.route('/documents')
 @login_required
 def documents():
-    project_id = session.get('project_id')
-    if not project_id:
-        return redirect(url_for('select_project'))
+    user_email = session.get('user_email')
+    if not user_email:
+        return redirect(url_for('login'))
 
-    role = session.get('role')
-    group_name = session.get('group_name')
+    participant = Participant.query.filter_by(email=user_email).first()
+    if not participant:
+        return redirect(url_for('login'))
 
     folder_id = request.args.get('folder_id', type=int)
+    project_id = request.args.get('project_id', type=int)
 
-    if role == 'Admin' and not group_name:
-        # Admins with no group see all documents for the project
-        if folder_id:
-            current_folder = Document.query.filter_by(id=folder_id, project_id=project_id).first_or_404()
-            documents = Document.query.filter_by(parent_id=current_folder.id, project_id=project_id).all()
-        else:
-            current_folder = None
-            documents = Document.query.filter_by(parent_id=None, project_id=project_id).all()
+    sql = "SELECT * FROM documents WHERE 1=1"
+    params = {}
+
+    if folder_id:
+        sql += " AND parent_id = :folder_id"
+        params['folder_id'] = folder_id
     else:
-        # Regular users can only see documents for the project and folder (if selected)
-        if folder_id:
-            current_folder = Document.query.filter_by(id=folder_id, project_id=project_id).first_or_404()
-            documents = Document.query.filter_by(parent_id=current_folder.id, project_id=project_id).all()
-        else:
-            current_folder = None
-            documents = Document.query.filter_by(parent_id=None, project_id=project_id).all()
+        sql += " AND parent_id IS NULL"
 
-    # Breadcrumb logic
-    breadcrumb, parent = [], current_folder
-    while parent:
-        breadcrumb.insert(0, parent)
-        parent = Document.query.get(parent.parent_id)
+    if participant.role == 'Admin':
+        # Admin can view any project (query param optional)
+        if project_id:
+            sql += " AND project_id = :project_id"
+            params['project_id'] = project_id
+        projects = Project.query.order_by(Project.name).all()
 
-    # Recently viewed
-    viewed_ids = session.get('recently_viewed', [])
-    recently_viewed_docs = Document.query.filter(Document.id.in_(viewed_ids)).all()
-    recently_viewed_docs.sort(key=lambda d: viewed_ids.index(d.id))
+    else:
+        # Normal user must have selected a project first
+        session_project_id = session.get('project_id')
+        if not session_project_id:
+            flash("Please select a project first.", "warning")
+            return redirect(url_for('select_project'))
 
-    # New uploads (limit 5)
-    project_name = session.get('project_name')
-    newly_uploaded_docs = Document.query.filter_by(project_name=project_name).order_by(Document.created_at.desc()).limit(5).all()
+        # Enforce project restriction
+        sql += " AND project_id = :session_project_id"
+        params['session_project_id'] = session_project_id
 
-    return render_template('documents.html',
-                           documents=documents,
-                           current_folder=current_folder,
-                           breadcrumb=breadcrumb,
-                           recently_viewed_docs=recently_viewed_docs,
-                           newly_uploaded_docs=newly_uploaded_docs,
-                           favorites_docs=[])
+        # Limit dropdown projects to only those linked to the group
+        projects = db.session.query(Project).join(group_project).filter(
+            group_project.c.group_name == session.get('group_name')
+        ).all()
+
+    sql += " ORDER BY is_folder DESC, name ASC"
+    documents = db.session.execute(text(sql), params).fetchall()
+
+    return render_template(
+        'documents.html',
+        documents=documents,
+        projects=projects,
+        current_project_id=session.get('project_id'),
+        current_folder=None,
+        parent_folder_id=None,
+        breadcrumb=[],
+        recently_viewed_docs=[],
+        newly_uploaded_docs=[],
+        favorites_docs=[]
+    )
+
+    
+@app.route('/documents/delete/<int:doc_id>', methods=['POST'])
+@login_required
+def delete_document(doc_id):
+    document = Document.query.get_or_404(doc_id)
+    try:
+        db.session.delete(document)
+        db.session.commit()
+        flash('Document deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting document: {str(e)}', 'danger')
+    return redirect(url_for('documents'))
+
+@app.route('/documents/edit/<int:doc_id>', methods=['GET', 'POST'])
+@login_required
+def edit_document(doc_id):
+    document = Document.query.get_or_404(doc_id)
+
+    # Always fetch the latest list of projects
+    projects = Project.query.order_by(Project.name).all()
+
+    if request.method == 'POST':
+        # Always update name
+        document.name = request.form['name']
+
+        # Always allow project change
+        project_id = request.form.get('project_id')
+        if project_id:
+            selected_project = Project.query.get(project_id)
+            if selected_project:
+                document.project_id = selected_project.id
+                document.project_name = selected_project.name
+
+        if not document.is_folder:
+            # Extra fields for files
+            document.notes = request.form.get('notes')
+            document.labels = request.form.get('labels')
+
+            # File replacement handling
+            file = request.files.get('file')
+            if file and file.filename.strip():
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+
+                # Calculate size & pages if PDF
+                pages = 0
+                if filename.lower().endswith('.pdf'):
+                    try:
+                        from PyPDF2 import PdfReader
+                        pages = len(PdfReader(file_path).pages)
+                    except:
+                        pass
+
+                size_kb = round(os.path.getsize(file_path) / 1024, 2)
+                document.filename = filename
+                document.pages = pages
+                document.size_kb = size_kb
+
+        db.session.commit()
+        flash('Document updated successfully.', 'success')
+        return redirect(url_for('documents'))
+
+    return render_template('edit_document.html', document=document, projects=projects)
+
+def get_folder_tree(parent_id=None, prefix=''):
+    folders = []
+    if parent_id is None:
+        # Root-level folders (parent_id is NULL)
+        children = Document.query.filter(Document.is_folder==True, Document.parent_id.is_(None)).order_by(Document.name).all()
+    else:
+        # Child folders
+        children = Document.query.filter_by(is_folder=True, parent_id=parent_id).order_by(Document.name).all()
+
+    for child in children:
+        folders.append((child.id, f"{prefix}{child.name}"))
+        folders += get_folder_tree(child.id, prefix=prefix + '--')
+    return folders
 
 @app.route('/upload-document', methods=['GET', 'POST'])
 @login_required
 def upload_document():
     folders = get_folder_tree()
-
-    # Get current participant
     participant = Participant.query.filter_by(email=session['user_email']).first()
 
-    # Admins see all projects, others see assigned projects
+    # Projects for dropdown
     if participant.role == 'Admin':
         projects = Project.query.order_by(Project.name).all()
     else:
-        projects = participant.projects  # Assigned projects only
+        projects = participant.projects
 
     if request.method == 'POST':
         name = request.form['name']
@@ -381,17 +513,15 @@ def upload_document():
         is_folder = 'is_folder' in request.form
         project_id = request.form.get('project_id')
 
-        # Ensure project is selected
         if not project_id:
             flash("Please select a project.", "danger")
             return redirect(request.url)
 
-        # Validate selected project
         selected_project = Project.query.get(project_id)
         if not selected_project:
             flash("Invalid project selected.", "danger")
             return redirect(request.url)
-
+        
         project_name = selected_project.name
         notes = request.form.get('notes')
         labels = request.form.get('labels')
@@ -401,7 +531,7 @@ def upload_document():
             folder_path = app.config['UPLOAD_FOLDER']
             if parent_id:
                 parent = Document.query.get(parent_id)
-                folder_path = get_folder_full_path(parent)
+                folder_path = os.path.join(get_folder_full_path(parent))
             folder_path = os.path.join(folder_path, secure_filename(name))
             os.makedirs(folder_path, exist_ok=True)
 
@@ -429,10 +559,14 @@ def upload_document():
             return redirect(request.url)
 
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        folder_path = app.config['UPLOAD_FOLDER']
+        if parent_id:
+            parent = Document.query.get(parent_id)
+            folder_path = get_folder_full_path(parent)
+        os.makedirs(folder_path, exist_ok=True)
+        file_path = os.path.join(folder_path, filename)
         file.save(file_path)
 
-        # Get PDF pages if applicable
         pages = len(PdfReader(file_path).pages) if file_path.endswith('.pdf') else 0
         size_kb = round(os.path.getsize(file_path) / 1024, 2)
 
@@ -572,27 +706,62 @@ def create_user():
         return redirect(url_for('participants'))
     return render_template('create_user.html')
 
-@app.route('/activity_log')
+@app.route('/activity_log', methods=['GET', 'POST'])
 def activity_log():
     role = session.get('role')
     user_group = session.get('group_name')
+    current_project_id = session.get('project_id')
 
+    # If Admin, allow project selection
     if role == 'Admin' and not user_group:
-        # Admin with no group: see all logs
-        logs = db.session.execute(text("""
-            SELECT al.* FROM activity_log al
-            ORDER BY al.timestamp DESC
+        projects = db.session.execute(text("""
+            SELECT id, name FROM project ORDER BY name
         """)).fetchall()
-    else:
-        # Non-admins: only see logs from their group
-        logs = db.session.execute(text("""
-            SELECT al.* FROM activity_log al
-            JOIN participant p ON al.author_email = p.email
-            WHERE p.group_name = :group
-            ORDER BY al.timestamp DESC
-        """), {'group': user_group}).fetchall()
 
-    return render_template("activity_log.html", logs=logs)
+        # Handle project change via dropdown
+        selected_project_id = request.form.get('project_filter')
+        if selected_project_id:
+            current_project_id = int(selected_project_id)
+            session['project_id'] = current_project_id
+
+        # Admin query: group + project
+        logs = db.session.execute(text("""
+            SELECT al.*
+            FROM activity_log al
+            INNER JOIN group_projects gp
+                ON al.group_name = gp.group_name
+            WHERE gp.project_id = :pid
+            ORDER BY al.timestamp DESC
+        """), {'pid': current_project_id}).fetchall()
+
+        return render_template(
+            "activity_log.html",
+            logs=logs,
+            projects=projects,
+            selected_project_id=current_project_id
+        )
+
+    else:
+        # Normal user: must match BOTH group and project
+        logs = db.session.execute(text("""
+            SELECT al.*
+            FROM activity_log al
+            INNER JOIN group_projects gp
+                ON al.group_name = gp.group_name
+            WHERE al.group_name = :group
+            AND gp.project_id = :pid
+            ORDER BY al.timestamp DESC
+        """), {
+            'group': user_group,
+            'pid': current_project_id
+        }).fetchall()
+
+        return render_template(
+            "activity_log.html",
+            logs=logs,
+            projects=None,
+            selected_project_id=current_project_id
+        )
 
 @app.route('/my-profile', methods=['GET', 'POST'])
 @login_required
@@ -650,24 +819,56 @@ def manage_permissions(participant_id):
     return render_template("manage_permissions.html", participant=participant, projects=projects)
 
 @app.route('/assign_group_project', methods=['GET', 'POST'])
-@login_required
 def assign_group_project():
-    if session.get('role') != 'Admin':
-        return redirect(url_for('index'))
-
     if request.method == 'POST':
-        group_name = request.form['group_name']
-        project_id = request.form['project_id']
-        db.session.execute(
-            text("INSERT INTO group_projects (group_name, project_id) VALUES (:group_name, :project_id)"),
-            {"group_name": group_name, "project_id": project_id}
-        )
+        group_name = request.form.get('group_name')
+        project_id = request.form.get('project_id')
+
+        if not group_name or not project_id:
+            flash("Please select both group and project.", "danger")
+            return redirect(url_for('assign_group_project'))
+
+        # 1️⃣ Insert into group_projects if not exists
+        db.session.execute(text("""
+            INSERT INTO group_projects (group_name, project_id)
+            SELECT :group_name, :project_id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM group_projects
+                WHERE group_name = :group_name AND project_id = :project_id
+            )
+        """), {'group_name': group_name, 'project_id': project_id})
+
+        # 2️⃣ Fetch all participants in this group
+        participants = db.session.execute(text("""
+            SELECT id FROM participant
+            WHERE group_name = :group_name
+        """), {'group_name': group_name}).fetchall()
+
+        # 3️⃣ Insert into participant_projects if not exists
+        for p in participants:
+            db.session.execute(text("""
+                INSERT INTO participant_projects
+                (participant_id, project_id, can_view, can_upload, can_download, can_edit, can_delete)
+                SELECT :pid, :project_id, 1, 0, 0, 0, 0
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM participant_projects
+                    WHERE participant_id = :pid AND project_id = :project_id
+                )
+            """), {'pid': p.id, 'project_id': project_id})
+
         db.session.commit()
-        flash("Group assigned to project successfully.")
+        flash(f"Group '{group_name}' assigned to project ID {project_id} and participants added with default permissions.", "success")
         return redirect(url_for('assign_group_project'))
 
-    groups = db.session.execute(text("SELECT DISTINCT group_name FROM participant")).fetchall()
-    projects = db.session.execute(text("SELECT id, name FROM project")).fetchall()
+    # GET request: load all groups and projects
+    groups = db.session.execute(text("""
+        SELECT DISTINCT group_name FROM participant
+        WHERE group_name IS NOT NULL
+    """)).fetchall()
+    projects = db.session.execute(text("""
+        SELECT id, name FROM project ORDER BY name
+    """)).fetchall()
+
     return render_template("assign_group_project.html", groups=groups, projects=projects)
 
 @app.route('/create-project', methods=['GET', 'POST'])
