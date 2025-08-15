@@ -4,8 +4,26 @@
 
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-2xl font-semibold">Activity Log</h2>
-    {% if session.get('role') == 'Admin' %}<button onclick="exportActivityLog()" class="bg-green-600 text-white px-4 py-1 rounded">Export CSV</button>{% endif %}
+
+    {% if projects %}
+    <form method="POST" class="flex items-center space-x-2">
+        <select name="project_filter" class="border p-1 rounded">
+            {% for project in projects %}
+                <option value="{{ project.id }}" {% if project.id == selected_project_id %}selected{% endif %}>
+                    {{ project.name }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">Filter</button>
+    </form>
+    {% endif %}
+
+    {% if session.get('role') == 'Admin' %}
+        <button onclick="exportActivityLog()" class="bg-green-600 text-white px-4 py-1 rounded">Export CSV</button>
+    {% endif %}
 </div>
+
+
 
 <table id="activityLogTable" class="min-w-full bg-white shadow rounded">
     <thead class="bg-gray-200 text-gray-700">

@@ -1,118 +1,128 @@
 {% extends 'base.html' %}
 {% block title %}Upload Document{% endblock %}
+
 {% block content %}
-<h2 class="text-xl font-bold mb-4">Upload New Document</h2>
+<div class="max-w-3xl mx-auto p-6 bg-white shadow-md rounded-lg">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Upload New Document</h2>
 
-<form method="POST" enctype="multipart/form-data" class="space-y-4" action="{{ url_for('upload_document') }}">
-    
-    <div>
-        <label class="block font-medium mb-1">Document/Folder Name</label>
-        <input type="text" name="name" placeholder="Document Name" class="w-full p-2 border rounded" required>
-    </div>
-
-    <div>
-        <label class="block font-medium mb-1">Parent Folder</label>
-        <select name="parent_id" class="w-full p-2 border rounded">
-            <option value="">-- No Parent (Root) --</option>
-            {% for folder_id, folder_name in folders %}
-                <option value="{{ folder_id }}">{{ folder_name|safe }}</option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div class="flex items-center">
-        <input type="checkbox" id="is_folder" name="is_folder" class="mr-2">
-        <label for="is_folder" class="font-medium cursor-pointer">Is Folder?</label>
-    </div>
-
-    <div>
-        <label class="block font-medium mb-1">Notes</label>
-        <textarea name="notes" placeholder="Notes" class="w-full p-2 border rounded"></textarea>
-    </div>
-
-    <div>
-        <label class="block font-medium mb-1">Labels</label>
-        <input type="text" name="labels" placeholder="Labels" class="w-full p-2 border rounded">
-    </div>
-
-    <div>
-        <label class="block font-medium mb-1">Select Project <span class="text-red-500">*</span></label>
-        <select name="project_id" class="w-full p-2 border rounded" required>
-            <option value="" disabled selected>-- Select Project --</option>
-            {% for project in projects %}
-                <option value="{{ project.id }}">{{ project.name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <!-- Drag-and-Drop Upload Zone -->
-    <div>
-        <label class="block font-medium mb-1">Document File</label>
-        <div id="dropZone" 
-            class="w-full p-6 border-2 border-dashed rounded text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-            <p class="text-gray-600">Drag & Drop file here or click to select</p>
-            <input type="file" name="file" id="fileInput" class="hidden" required>
+    <form method="POST" enctype="multipart/form-data" class="space-y-5" action="{{ url_for('upload_document') }}">
+        <!-- Document/Folder Name -->
+        <div>
+            <label class="block font-medium mb-2 text-gray-700">Document / Folder Name</label>
+            <input type="text" name="name" placeholder="Enter name" class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-400" required>
         </div>
-        <p id="fileName" class="text-sm text-gray-500 mt-1"></p>
-    </div>
 
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-        Upload
-    </button>
-</form>
+        <!-- Parent Folder -->
+        <div>
+            <label class="block font-medium mb-2 text-gray-700">Parent Folder</label>
+            <select name="parent_id" class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-400">
+                <option value="">-- No Parent (Root) --</option>
+                {% for folder_id, folder_name in folders %}
+                    <option value="{{ folder_id }}">{{ folder_name|safe }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-<a href="{{ url_for('documents') }}" class="inline-block mt-4 text-indigo-600 hover:underline">← Back to Documents</a>
+        <!-- Is Folder Checkbox -->
+        <div class="flex items-center space-x-2">
+            <input type="checkbox" id="is_folder" name="is_folder" class="h-5 w-5 text-blue-600 focus:ring-2 focus:ring-blue-400 rounded">
+            <label for="is_folder" class="font-medium text-gray-700 cursor-pointer">Is Folder?</label>
+        </div>
+
+        <!-- Notes -->
+        <div>
+            <label class="block font-medium mb-2 text-gray-700">Notes</label>
+            <textarea name="notes" placeholder="Optional notes" class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-400" rows="3"></textarea>
+        </div>
+
+        <!-- Labels -->
+        <div>
+            <label class="block font-medium mb-2 text-gray-700">Labels</label>
+            <input type="text" name="labels" placeholder="Tags or labels" class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <!-- Project Selection -->
+        <div>
+            <label class="block font-medium mb-2 text-gray-700">Select Project <span class="text-red-500">*</span></label>
+            <select name="project_id" class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-400" required>
+                <option value="" disabled selected>-- Select Project --</option>
+                {% for project in projects %}
+                    <option value="{{ project.id }}">{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Drag & Drop File Upload -->
+        <div>
+            <label class="block font-medium mb-2 text-gray-700">Document File</label>
+            <div id="dropZone" class="w-full p-6 border-2 border-dashed rounded-lg text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition duration-200">
+                <p class="text-gray-500">Drag & drop a file here or click to select</p>
+                <input type="file" name="file" id="fileInput" class="hidden" required>
+            </div>
+            <p id="fileName" class="text-sm text-gray-400 mt-1"></p>
+        </div>
+
+        <!-- Submit Button -->
+        <div>
+            <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition duration-200">
+                Upload
+            </button>
+        </div>
+    </form>
+
+    <a href="{{ url_for('documents') }}" class="inline-block mt-5 text-blue-600 hover:underline">← Back to Documents</a>
+</div>
 
 <script>
-  const isFolderCheckbox = document.getElementById('is_folder');
-  const fileInput = document.getElementById('fileInput');
-  const dropZone = document.getElementById('dropZone');
-  const fileNameDisplay = document.getElementById('fileName');
+const isFolderCheckbox = document.getElementById('is_folder');
+const fileInput = document.getElementById('fileInput');
+const dropZone = document.getElementById('dropZone');
+const fileNameDisplay = document.getElementById('fileName');
 
-  // Toggle file input if folder is checked
-  function toggleFileInput() {
+// Toggle file input if folder is checked
+function toggleFileInput() {
     if (isFolderCheckbox.checked) {
-      fileInput.disabled = true;
-      fileInput.required = false;
-      fileInput.value = '';
-      fileNameDisplay.textContent = '';
-      dropZone.classList.add('opacity-50', 'pointer-events-none');
+        fileInput.disabled = true;
+        fileInput.required = false;
+        fileInput.value = '';
+        fileNameDisplay.textContent = '';
+        dropZone.classList.add('opacity-50', 'pointer-events-none');
     } else {
-      fileInput.disabled = false;
-      fileInput.required = true;
-      dropZone.classList.remove('opacity-50', 'pointer-events-none');
+        fileInput.disabled = false;
+        fileInput.required = true;
+        dropZone.classList.remove('opacity-50', 'pointer-events-none');
     }
-  }
+}
 
-  // Handle drag and drop
-  dropZone.addEventListener('click', () => fileInput.click());
+// Drag & Drop functionality
+dropZone.addEventListener('click', () => fileInput.click());
 
-  dropZone.addEventListener('dragover', (e) => {
+dropZone.addEventListener('dragover', e => {
     e.preventDefault();
     dropZone.classList.add('bg-blue-50', 'border-blue-400');
-  });
+});
 
-  dropZone.addEventListener('dragleave', () => {
+dropZone.addEventListener('dragleave', () => {
     dropZone.classList.remove('bg-blue-50', 'border-blue-400');
-  });
+});
 
-  dropZone.addEventListener('drop', (e) => {
+dropZone.addEventListener('drop', e => {
     e.preventDefault();
     dropZone.classList.remove('bg-blue-50', 'border-blue-400');
     const file = e.dataTransfer.files[0];
     if (file) {
-      fileInput.files = e.dataTransfer.files;
-      fileNameDisplay.textContent = file.name;
+        fileInput.files = e.dataTransfer.files;
+        fileNameDisplay.textContent = file.name;
     }
-  });
+});
 
-  fileInput.addEventListener('change', () => {
+fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
-      fileNameDisplay.textContent = fileInput.files[0].name;
+        fileNameDisplay.textContent = fileInput.files[0].name;
     }
-  });
+});
 
-  isFolderCheckbox.addEventListener('change', toggleFileInput);
-  document.addEventListener('DOMContentLoaded', toggleFileInput);
+isFolderCheckbox.addEventListener('change', toggleFileInput);
+document.addEventListener('DOMContentLoaded', toggleFileInput);
 </script>
 {% endblock %}

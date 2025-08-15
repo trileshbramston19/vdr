@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}Edit {{ "Folder" if document.is_folder else "Document" }}{% endblock %}
+
+{% block content %}
+<style>
+    .edit-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        padding: 2rem;
+    }
+    .edit-header {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 0.5rem;
+    }
+    .form-control, .form-select {
+        border-radius: 8px;
+        padding: 0.75rem;
+        border: 1px solid #dcdfe6;
+        font-size: 1rem;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #409eff;
+        box-shadow: 0 0 0 3px rgba(64,158,255,0.15);
+    }
+    .btn-save {
+        background-color: #409eff;
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+    }
+    .btn-save:hover {
+        background-color: #337ecc;
+    }
+    .btn-cancel {
+        background-color: #f0f0f0;
+        color: #555;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        border: none;
+        transition: all 0.2s ease;
+    }
+    .btn-cancel:hover {
+        background-color: #e2e2e2;
+    }
+    .section-divider {
+        border-top: 1px solid #eee;
+        margin: 2rem 0;
+    }
+</style>
+
+<div class="container my-5" style="max-width: 720px;">
+    <div class="edit-card">
+        <div class="edit-header">
+            <i class="fas {{ 'fa-folder' if document.is_folder else 'fa-file-alt' }} text-primary"></i>
+            Edit {{ "Folder" if document.is_folder else "Document" }}
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="mt-4">
+
+            <!-- Name -->
+            <div class="mb-4">
+                <label for="name" class="form-label">
+                    {{ "Folder Name" if document.is_folder else "Document Name" }}
+                </label>
+                <input type="text" id="name" name="name" class="form-control"
+                       value="{{ document.name }}" required>
+            </div>
+
+            <!-- Project -->
+            <div class="mb-4">
+                <label for="project_id" class="form-label">Project</label>
+                <select id="project_id" name="project_id" class="form-select" required>
+                    <option value="">Select Project</option>
+                    {% for project in projects %}
+                        <option value="{{ project.id }}" {% if document.project_id == project.id %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if not document.is_folder %}
+            <div class="section-divider"></div>
+
+            <!-- Notes -->
+            <div class="mb-4">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea id="notes" name="notes" class="form-control" rows="3">{{ document.notes }}</textarea>
+            </div>
+
+            <!-- Labels -->
+            <div class="mb-4">
+                <label for="labels" class="form-label">Labels</label>
+                <input type="text" id="labels" name="labels" class="form-control" value="{{ document.labels }}">
+            </div>
+
+            <!-- File Upload -->
+            <div class="mb-4">
+                <label for="file" class="form-label">Replace File</label>
+                <input type="file" id="file" name="file" class="form-control">
+                {% if document.filename %}
+                    <small class="text-muted d-block mt-2">
+                        Current file: <strong>{{ document.filename }}</strong>  
+                        Size: {{ document.size_kb }} KB | Pages: {{ document.pages }}
+                    </small>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{{ url_for('documents') }}" class="btn-cancel">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
